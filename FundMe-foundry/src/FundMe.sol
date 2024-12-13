@@ -18,7 +18,6 @@ contract FundMe {
     uint256 public constant MINIMUM_USD = 1 * 1e18;
     address[] private s_fundersList;
     mapping(address funderAddress => uint256 amountFunded) private s_fundersToAmount;
-
     AggregatorV3Interface private s_priceFeed;
 
     constructor(address priceFeed) {
@@ -37,6 +36,19 @@ contract FundMe {
         }
 
         s_fundersToAmount[msg.sender] += msg.value;
+    }
+
+    function cheaperWithdraw() public onlyOwner() {
+        uint256 fundersAmount = s_fundersList.length;
+
+        for(uint256 funderIndex = 0; funderIndex < fundersAmount; funderIndex++){
+            address funder = s_fundersList[funderIndex];
+            s_fundersToAmount[funder] = 0;
+        }
+
+        s_fundersList = new address[](0);
+        (bool callSuccess, ) = payable(msg.sender).call{value: address(this).balance}("");
+        require(callSuccess, "Withdraw failed.");
     }
 
     function withdrawFunding() public onlyOwner {
