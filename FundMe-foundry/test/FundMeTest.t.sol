@@ -7,11 +7,19 @@ import { DeployFundMe } from "../script/DeployFundMe.s.sol";
 
 contract FundMeTest is Test {
     FundMe fundMe;
+    address USER = makeAddr("USER");
+
+    modifier funded(){
+        vm.prank(USER);
+        vm.deal(USER, 10 * 1e18);
+        _;
+    }
 
     function setUp() external {
         // fundMe = new FundMe(0x694AA1769357215DE4FAC081bf1f309aDC325306);
         DeployFundMe deployFundMe = new DeployFundMe();
         fundMe = deployFundMe.run();
+        vm.deal(USER, 10 * 1e18);
     }
 
     function testMinFund() public view {
@@ -19,6 +27,48 @@ contract FundMeTest is Test {
     }
 
     function testOwner() public view {
-        assertEq(fundMe.i_contractOwner(), msg.sender);
+        assertEq(fundMe.getOwner(), msg.sender);
+    }
+
+    function testPriceFeedVersion() public view {
+        uint256 version = fundMe.getVersion();
+        assertEq(version, 4);
+    }
+
+    function testFundFailIfNotEnough () public {
+        vm.expectRevert();
+        fundMe.sendFunding();
+    }
+
+    function testFundSuccess () public funded {
+        fundMe.sendFunding{value: 1 * 1e18}();
+        uint256 amountFunded = fundMe.getAddressToAmount(USER);
+        assertEq(amountFunded, 1 * 1e18);
+    }
+
+    function testAddFunderToArrayOfFunders () public funded {
+        fundMe.sendFunding{value: 1 * 1e18}();
+        address funder = fundMe.getFunder(0);
+        assertEq(funder, USER);
+    }
+
+    function onlyOwnerAndWithdrawNotOwner () public funded {
+        vm.expectRevert();
+        vm.prank(USER);
+        fundMe.withdrawFunding();
+    }
+    function onlyOwnerAndWithdrawOwner () public funded {
+        fundMe.sendFunding{value: 1 * 1e18}();
+        uint256 startingOwnerBalance = fundMe.getOwner().balance;
+        uint256 startingContractBalance = address(fundMe).balance;
+
+        vm.prank(fundMe.getOwner());
+        fundMe.withdrawFunding();
+
+        uint256 endingOwnerBalance = fundMe.getOwner().balance;
+        uint256 endingContractBalance = address(fundMe).balance;
+
+        assertEq(endingContractBalance, 0);
+        assertEq(endingOwnerBalance, startingOwnerBalance + startingContractBalance);
     }
 }

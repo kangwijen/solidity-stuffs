@@ -14,10 +14,10 @@ contract FundMe {
     */
     using PriceLibrary for uint256;
 
-    address public immutable i_contractOwner;
+    address private immutable i_contractOwner;
     uint256 public constant MINIMUM_USD = 1 * 1e18;
-    address[] public fundersList;
-    mapping(address funderAddress => uint256 amountFunded) public fundersToAmount;
+    address[] private s_fundersList;
+    mapping(address funderAddress => uint256 amountFunded) private s_fundersToAmount;
 
     AggregatorV3Interface private s_priceFeed;
 
@@ -32,11 +32,11 @@ contract FundMe {
         require(msg.value.getConversion(s_priceFeed) >= MINIMUM_USD, "Minimum donation not met.");
 
         // If new funder
-        if (fundersToAmount[msg.sender] == 0) {
-            fundersList.push(msg.sender);
+        if (s_fundersToAmount[msg.sender] == 0) {
+            s_fundersList.push(msg.sender);
         }
 
-        fundersToAmount[msg.sender] += msg.value;
+        s_fundersToAmount[msg.sender] += msg.value;
     }
 
     function withdrawFunding() public onlyOwner {
@@ -44,12 +44,12 @@ contract FundMe {
         // require(msg.sender == contractOwner, "Withdraw only for owner.");
 
         // Set all to 0
-        for(uint256 funderIndex = 0; funderIndex < fundersList.length; funderIndex++){
-            address funder = fundersList[funderIndex];
-            fundersToAmount[funder] = 0;
+        for(uint256 funderIndex = 0; funderIndex < s_fundersList.length; funderIndex++){
+            address funder = s_fundersList[funderIndex];
+            s_fundersToAmount[funder] = 0;
         }
 
-        fundersList = new address[](0);
+        s_fundersList = new address[](0);
 
         // payable(msg.sender).transfer(address(this).balance);
         (bool callSuccess, ) = payable(msg.sender).call{value: address(this).balance}("");
@@ -74,5 +74,17 @@ contract FundMe {
 
     fallback() external payable {
         sendFunding();
+    }
+
+    function getAddressToAmount(address funderAddress) external view returns(uint256){
+        return s_fundersToAmount[funderAddress];
+    }
+
+    function getFunder(uint256 index) external view returns(address){
+        return s_fundersList[index];
+    }
+
+    function getOwner() external view returns(address){
+        return i_contractOwner;
     }
 }
