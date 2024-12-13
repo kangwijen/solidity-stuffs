@@ -2,8 +2,9 @@
 pragma solidity ^0.8.26;
 
 import { PriceLibrary } from "./PriceLibrary.sol";
+import { AggregatorV3Interface } from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
-error notOwner();
+error FundMe__notOwner();
 
 contract FundMe {
     /* 
@@ -18,14 +19,17 @@ contract FundMe {
     address[] public fundersList;
     mapping(address funderAddress => uint256 amountFunded) public fundersToAmount;
 
-    constructor() {
+    AggregatorV3Interface private s_priceFeed;
+
+    constructor(address priceFeed) {
         i_contractOwner = msg.sender;
+        s_priceFeed = AggregatorV3Interface(priceFeed);
     }
 
     function sendFunding() public payable {
         // Allow users to send money
         // Have a minimum $ sent
-        require(msg.value.getConversion() >= MINIMUM_USD, "Minimum donation not met.");
+        require(msg.value.getConversion(s_priceFeed) >= MINIMUM_USD, "Minimum donation not met.");
 
         // If new funder
         if (fundersToAmount[msg.sender] == 0) {
@@ -52,10 +56,14 @@ contract FundMe {
         require(callSuccess, "Withdraw failed.");
     }
 
+    function getVersion() public view returns(uint256){
+        return s_priceFeed.version();
+    }
+
     modifier onlyOwner() {
         // require(msg.sender == i_contractOwner, "Only owner only function.");
         if(msg.sender != i_contractOwner){
-            revert notOwner();
+            revert FundMe__notOwner();
         }
         _;
     }
