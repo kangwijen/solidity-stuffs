@@ -7,3 +7,6 @@
 [submodule "FundMe-foundry/lib/foundry-devops"]
 	path = FundMe-foundry/lib/foundry-devops
 	url = https://github.com/cyfrin/foundry-devops
+[submodule "heist-exploit/lib/forge-std"]
+	path = heist-exploit/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
