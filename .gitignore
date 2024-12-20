@@ -1,2 +1,4 @@
 heist-exploit/
 Makefile
+cache/
+out/
